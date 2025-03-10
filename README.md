@@ -2,6 +2,8 @@
 A easy way to conduct rna-seq analysis and it's also my way of learning
 
 
+## Process
+![Process of this rna-seq analysis](process.png)
 
 ## CN
 我在最近第一次做了一次完整的机上分析流程和下机的注释之后，总结了我分析过程中的全流程和踩过的坑，总结了分享出来。
