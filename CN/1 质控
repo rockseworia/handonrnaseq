@@ -1,0 +1,27 @@
+# 1 质控
+
+## 1.1 安装fastp
+ 在控制台依次执行：
+ conda create -n "fastp" #新建conda环境
+ conda install -c bioconda fastp #使用bioconda安装fastp
+
+## 1.2 质控
+	1）建立fastp.sh：
+sample_file="/home/u2602707/zokor_rna/BMK241206-CL614-ZX01-0101/BMK_DATA_20250220040001_2/Data/sample.name"
+data_dir="/home/u2602707/zokor_rna/BMK241206-CL614-ZX01-0101/BMK_DATA_20250220040001_2/Data"
+
+threads=12
+
+while IFS= read -r sample; do
+    fastp -i "${data_dir}/${sample}_1.fq.gz" \
+          -I "${data_dir}/${sample}_2.fq.gz" \
+          -o "${data_dir}/cleandata/${sample}_1.fastq" \
+          -O "${data_dir}/cleandata/${sample}_2.fastq" \
+          -j "${data_dir}/cleandata/${sample}.json" \
+          -h "${data_dir}/cleandata/${sample}.html" \
+          -w $threads
+done < "$sample_file"
+
+即可，其中sample.namewe为目录信息，可以通过ls >sample.name生成；
+	2）mkdir cleandata
+	3）conda activate fastp；执行fastp.sh即可
