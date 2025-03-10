@@ -1,0 +1,122 @@
+2 比对
+
+2.1 安装HISAT2
+	建议同上构建单独的conda环境；
+
+2.1.1 方案1 ：直接conda安装
+	可以尝试：
+	conda create -n "hisat2"
+	conda install -c bioconda hisat2
+中途直接按y即可，安装完成后
+	conda activate hisat2
+然后输入：
+	hisat2 --version
+如果此时输出的结果展示的结果类似于下面的情况：
+
+
+则表明安装成功；如果大部分相同，但出现了：Compiler: collect2: error: ld returned 1 exit status等error，则表明正常安装方法不行，尝试方案2
+
+2.1.2 方案2 ：在github下载源代码本地编译
+	(1)打开github链接：https://github.com/DaehwanKimLab/hisat2
+	(2)在右侧的绿色“<>Code”按钮点击，在弹出的图形框中选择 Download ZIP
+	(3)下载完成后，通过各种方式上传到服务器上
+	(4)假设下载后的文件叫做"hisat2-master.zip"，则在该文件的相同目录下输入：
+		unzip hisat2-master.zip
+	(5)然后
+		cd hisat2-master
+		conda activate hisat2(确保现在在hisat2的conda环境中)
+		此时通过两个命令：
+						g++ --version
+						make --version
+		如果正常输出无错误信息，则表明成功(此二者理应为Linux自带包，按理来说不会出现问题)；反之，则执行：
+		conda install -c conda-forge gxx_linux-64 make
+		如果成功，则依次执行下面的代码：
+		export CXX=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++
+		make -j X(这里的X按照实际服务器运行的线程设置)
+	(6)完成后，输入：
+		ls hisat2 hisat2-*，理应可以看到hisat2，hisat2-build等文件
+	(7)接着输入：
+		cp hisat2 hisat2-* $CONDA_PREFIX/bin/
+	(8)接下来验证安装结果：
+		hisat2 --version
+此时如果没有弹出报错信息，如error等，则表明安装成功，继续看2.2部分；如果此时还是失败，请请教AI或互联网教程，或联系我
+
+2.2 安装GeneMark并使用其生成.gtf文件
+	（1）打开GeneMark官网：https://genemark.bme.gatech.edu/
+	（2）选择右侧的Download-Programs
+	（3）左侧选择GeneMark-ES/ET/EP+ ver 4.72_lic，右侧一般选择LINUX 64 kernel 3.10 - 5；根据实际情况选择
+	（4）下方填写信息，获取密钥，获得密钥后，上传到服务器文件夹中
+	（5）cd work_dir（你创建的存放GeneMark的文件夹）
+		5.1）tar vxzf *.gz #解压GeneMark文件
+		5.2）cd gmes* #进入目标文件夹
+		5.3）mv gm_key ~/.gm_key #激活密钥
+		5.4）perl gmes_petap.pl #尝试运行，观察结果；如果提示没有这个.pl文件，确认当前是否在/gmes_linux_64_4或类似的目录下；
+		TIPS：此时一般会报错，提示缺乏某个perl的包，第一次一般是缺少YAML的包，缺啥补啥，用CPAN下载这些Perl的包，尽量不要选择conda，存在大量问题；直到再次运行不再弹出问题，表明安装完成。
+		常见缺少的依赖如：sudo cpanm YAML Hash::Merge Logger::Simple Parallel::ForkManager MCE::Mutex
+	（6）完成安装后，确认当前在工作目录gmes_linux_64_4下，因为GeneMark的.pl执行文件储存在这个目录下。
+	（7）一般执行的是预训练的-ES，不需要物种的信息矩阵，执行：
+		perl gmes_petap.pl your/initive/genome/file your/output/location #注意第二个output不可以选当前目录，否则会提示报错，建议在当前文件夹新建一个目录或输出外外部地址。
+	（8）执行完成后，就获得了.gtf文件可以进行后续处理
+
+
+2.3 安装 samtools:
+	建议直接在hisat2的conda环境下进行，不用切换环境，执行下面的代码：
+	conda install -c bioconda samtools
+
+
+
+2.3 参考索引
+	2.3.1 获取参考索引
+		对于模式生物或已经存在一些研究的物种，一般存在现成的.gtf/.gff的注释文件，可以在多个数据库中根据拉丁文名搜索，如NCBI，CNGB等；
+		如果非模式生物或目前公开数据库中无优质组装基因组或注释的，则考虑使用GeneMark等物种注释软件，详情见2.2部分；
+	2.3.2 构建参考索引
+		一般来说，需要至少准备基因组序列（.fa/.fna等fasta格式的文件），如果可能的话，则应该同时准备.gtf的注释序列和snp的信息；
+		对于非模式生物，一般无SNP信息，优质重测序较少；接下来以只有基因组序列和同时有基因组和注释两种分别介绍：
+		（1）激活环境：conda activate hisat2：
+		（2）hisat2无法直接调用.gtf文件，而是通过.gtf文件的外显子区域和剪切信息构建索引，在.gtf的工作目录下，执行：
+			1）hisat2_extract_splice_sites.py *.gtf > genome.ss
+			2）hisat2_extract_exons.py *.gtf > genome.exon
+			TIPS:*表示匹配当前目录下的任意字符，*.gtf表示寻找当前工作目录下的以.gtf后缀为结尾的，前面字符任意的文件；
+			若当前工作目录下只有一个以.gtf结尾的文件，则不用修改；反之则将*.gtf修改为对应的实际文件名
+	（3）然后创建.sh文件，输入：
+			hisat2-build -p X --ss genome.ss --exon genome.exon NAME.fa genome_index
+			TIPS：X表明想要调用的线程数量，.fa是从NCBI等下载的fasta格式文件(也可能是.fna)，最后一个字节是希望以.ht结尾的文件的名字；
+			前期线程占用率可能很低，甚至可能长期保持一个核，这是正常的，随后会上升。（而不是网上部分说的没有做多线程优化，只能单线程）
+			成功的表现是存在大量name.1/2/3.ht2等文件
+
+2.4 比对
+	2.4.1 比对生成.sam文件
+		vim hisat2.sh:输入以下内容：
+
+sample_file="/your/path/to/sample1.name"
+data_dir="/your/path/to/cleandata"
+
+mkdir -p "${data_dir}/bam_files"
+
+while IFS= read -r sample; do
+       hisat2 --dta \
+        -p 8 \
+        -x /path/to/your/index_name \	#这是上一步hisat-build建立的时候的index的名字
+        -1 "${data_dir}/${sample}_1.fastq" \				#输入序列-1
+        -2 "${data_dir}/${sample}_2.fastq" \				#输入序列-2
+        -S "${data_dir}/newbam_files/${sample}.sam"			#输出文件的地址
+done < "$sample_file"			
+	2.4.2 转换格式
+		.bam是可以读取的文件格式，但文件较大，因此使用samtools转换格式并sorted
+		操作 vim bamsort.sh:
+
+# 进入目标目录（确认当前已在正确目录）
+cd /path/to/your/bam_files
+
+for sam_file in *.sam; do
+    base_name=${sam_file%.sam}
+
+    # 转换并压缩为BAM（-@ 线程数，-S 输入为SAM，-b 输出为BAM）
+    samtools view -@ 8 -Sb "$sam_file" -o "${base_name}.bam"
+
+    samtools sort -@ 8 "${base_name}.bam" -o "${base_name}_sorted.bam"
+    samtools index -@ 8 "${base_name}_sorted.bam"
+done
+		
+		速度一般很快，每个.sam会得到一个.bam，一个.bam.bai，这是接下来会用到的文件。
+
