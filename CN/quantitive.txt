@@ -1,0 +1,118 @@
+3 定量
+
+3.1 软件安装
+	我使用的是stringtie系列的分析，以后使用过features_Count之后会补充上相关的pipeline
+	
+	3.1.1 安装综述
+		在我写下这个cookbook的时候，stringtie的版本是3.0.0，这个版本是没法使用的，使用这个版本的stringtie会生成一些特殊的序列，导致后续分析报错
+		因此github和外国社区的一般建议是回退版本，可以肯定稳定运行的版本是stringtie2.0.4(我就是在这个版本分析成功的)（3.0.0和1.3.6是肯定不行的）
+		接下来以stringtie2.0.4为例介绍：
+		这个版本有两个特点，
+		一个是bioconda中并非记录，需要自己从github上下载编译；
+		一个是这个文件最后汇总count的prepDE.py是python2写的，因为py的2和3是不兼容的，因此需要准备一个python2的conda环境。
+		除此之外，还应使用transdecoder预测ORF和蛋白质等，对于非模式生物，有助于后续分析。
+		
+	3.1.2 stringtie 2.0.4 安装
+		因为git不方便获取早期版本，我的建议是直接在Windows上下载，然后上传到服务器上，顺序如下：
+		1）打开https://github.com/gpertea/stringtie
+		2）右侧栏可以看到可以点击的超链接 Release ， 点击进入
+		3）找到2.0.4，选择下载 Source code(tar.gz)
+		4)上传到服务器中，tar -xzvf stringtie-2.0.4.tar.gz
+		5）cd stringtie-2.0.4
+		6）make release #编译
+		7）sudo cp stringtie /usr/local/bin/
+		8）此时输入 stringtie --version，应当在屏幕上出现2.0.4，表明安装成功
+		
+	3.1.2 准备python 2 环境
+		输入conda create -n "py2" # -n means -name
+	
+	3.1.3 在使用transcoder对ORF进行预测前，需要gffread生成基于转录本的.fasta文件，使用bioconda即可安装
+		conda create -n "gffread"
+		conda install -c bioconda gffread
+
+	
+	3.1.4 安装 transdecoder 
+		conda create -n "transdecoder"
+		conda install -c bioconda transcoder
+		
+		
+	
+	3.1.5 安装TB-tools
+		打开https://github.com/CJ-Chen/TBtools-II ，选择release，
+		打开https://www.yuque.com/cjchen/hirv8i/iclxpx2841g205hm ；选择一键下载，安装即可
+
+3.2 定量
+	3.2.1 stringtie
+		建立文件stringtie.sh，输入以下内容：
+file_path="/home/u2602707/zokor_rna/BMK241206-CL614-ZX01-0101/BMK_DATA_20250220040001_2/Data/cleandata"
+gtf_file="/home/u2602707/genome/Ebaileyi/Ebaileyi.gtf"
+sample_list="${file_path}/stringtie/sample.name"
+while read -r i; do
+    mkdir -p "${file_path}/stringtie/${i}"
+    (
+        cd "${file_path}/stringtie/${i}" 
+
+        input_bam="${file_path}/newbam_files/${i}_sorted.bam"
+        stringtie "${input_bam}" \
+            -G "${gtf_file}" \
+            -p 24 \
+            -e \
+            -B \
+            -o "${file_path}/stringtie/${i}/${i}.stringtie.gtf"
+    )
+done < "${sample_list}"
+		
+		其中，.gtf为最开始使用genemark或下载的注释文件，bam为上一步sorted的bamfiles
+		
+		conda激活stringtie环境，执行：stringtie.sh
+		
+	3.2.2 prepDE.py
+		上一步stringtie.sh执行完成后，会在stringtie目录下建立${i}/.stringtie.gtf文件，此时可以进行下一步整理：
+		输入which prepDE.py；如果弹出了地址指向了stringtie的目录，表示此时可用；如果没有，可以cd寻找prepDE.py的位置，下一步指定时，直接指定绝对目录：
+		.1（可选） 创建index.sh，构思代码，使得建立出index.txt按照如下格式：
+		AAAAAA /path/to/your/AAAAAA.stringtie.gtf
+		.2)因为prepDE.py会检索当前目录下的文件夹的.gtf情况，因此.1实际上是可选项。
+		执行 prepDE.py 即可；
+		如果上一步建立 index.txt ，则执行 prepDE.py -i index.txt
+		如果在最开始which prepDE.py没有结果，则执行： /path/to/your/stringtie/prepDE.py 即可；
+		
+		一般来说速度很快，默认会生成两个文件，如果想要重定向，可以查看manual或—help;默认会生成：
+		gene_count_matrix.csv
+		transcript_count_matrix.csv
+		这两个文件即为raw_count数据；一般来说down到本地即可；
+	
+	3.2.3 gffread
+		执行下面的命令：
+
+    gffread /path/to/your/.gtf -g path/to/your/genome.fna -w transcripts.fasta
+
+		即可生成结合了注释数据的转录组序列
+
+		
+	3.2.4 激活transdecoder环境
+		激活transdecoder环境，执行下面的命令：
+		TransDecoder.LongOrfs -t /path/to/your/transcripts.fasta
+		TransDecoder.Predict -t /path/to/your/transcripts.fasta
+		执行完成后会在当前目录下生成一些文件，只需要当前目录下的.pep文件即可，将其下载到本地
+		
+		
+		
+3.3 下机
+	3.3.1 下载结果文件
+		共需要下载3个文件(2x+1)到本地：
+		gene_count_matrix.csv
+		transcript_count_matrix.csv
+		transdecoder.pep
+	3.3.2 提交注释请求：
+		1）下载后，打开eggNOG-mapper：http://eggnog-mapper.embl.de/
+		2）顶端选择protein文件文件，choose file选择down到本地的.pep文件，留自己的邮箱，选择submit即可
+		3）立即查看邮箱，会收到邮件题为：eggNOG-mapper job XXXXXX Submitted
+		4）打开邮件，选择Click to manage your job；进入后选择start后即可开始；
+		5）此时文件开始处理，文件处理的时间和样本数量有关，一般每8个样本大概需要5分钟；
+		6）完成后会同样收到一封邮件：eggNOG-mapper job XXXXXX finished, with status finished
+		7）选择Access your job files here；进入文件目录，我们需要的是.annotations文件，不过如果觉得后续还会用到，可以在服务器用weget下载所有生成的文件：wget -r -l inf -np -nH --cut-dirs=N -R "index.html*" URL
+	3.3.3 整理注释格式
+		1）打开上一步下载的TB-tools
+		2）在右上角搜索栏搜索eggNOG-mapper helper,打开后提交文件
+		3）速度很快，即可获得文件；下载本地即为注释信息，包括GO，KEGG，Pfam等
+		4）次注释信息与转录组的count.csv对应，可以对应查询。
