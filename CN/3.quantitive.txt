@@ -84,7 +84,7 @@ done < "${sample_list}"
 	3.2.3 gffread
 		执行下面的命令：
 
-    gffread /path/to/your/.gtf -g path/to/your/genome.fna -w transcripts.fasta
+    		gffread /path/to/your/.gtf -g path/to/your/genome.fna -w transcripts.fasta
 
 		即可生成结合了注释数据的转录组序列
 
