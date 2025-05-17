@@ -65,6 +65,10 @@ done < "${sample_list}"
 		其中，.gtf为最开始使用genemark或下载的注释文件，bam为上一步sorted的bamfiles
 		
 		conda激活stringtie环境，执行：stringtie.sh
+		注意，此时如果提示Error: no valid ID found for GFF record，很可能是NCBI的.gtf文件有问题。
+		这是因为NCBI的.gtf文件会保留gene行，但transcript = ""，而这并不是stringtie所认可的合法结构。因此根据
+		post:https://www.biostars.org/p/488062/ 的建议，可以删除gene行，具体来说：
+		awk '$3 != "gene" ' my.gtf > my_no_genes.gtf 即可解决问题，而这不影响转录本。算是一个目前的解决方案。
 		
 	3.2.2 prepDE.py
 		上一步stringtie.sh执行完成后，会在stringtie目录下建立${i}/.stringtie.gtf文件，此时可以进行下一步整理：
