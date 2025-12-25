@@ -33,6 +33,8 @@
 		如果成功，则依次执行下面的代码：
 		export CXX=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++
 		make -j X(这里的X按照实际服务器运行的线程设置)
+
+		直接使用sudo yum install gcc-c++即可安装，g++包含在gcc-c++(写的时候笔者)；make好像
 	(6)完成后，输入：
 		ls hisat2 hisat2-*，理应可以看到hisat2，hisat2-build等文件
 	(7)接着输入：
