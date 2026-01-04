@@ -98,10 +98,10 @@ mkdir -p "${data_dir}/bam_files"
 while IFS= read -r sample; do
        hisat2 --dta \
         -p 8 \
-        -x /path/to/your/index_name \	#这是上一步hisat-build建立的时候的index的名字
-        -1 "${data_dir}/${sample}_1.fastq" \				#输入序列-1
-        -2 "${data_dir}/${sample}_2.fastq" \				#输入序列-2
-        -S "${data_dir}/newbam_files/${sample}.sam"			#输出文件的地址
+        -x /path/to/your/index_name \
+        -1 "${data_dir}/${sample}_1.fastq" \
+        -2 "${data_dir}/${sample}_2.fastq" \
+        -S "${data_dir}/newbam_files/${sample}.sam"
 done < "$sample_file"			
 	2.4.2 转换格式
 		.bam是可以读取的文件格式，但文件较大，因此使用samtools转换格式并sorted
